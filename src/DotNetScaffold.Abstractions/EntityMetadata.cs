@@ -36,6 +36,11 @@ public sealed record EntityMetadata(
     IReadOnlyList<PropertyMetadata> Properties,
     IReadOnlyList<NavigationMetadata> Navigations)
 {
+    /// <summary>True when more than one property is flagged as part of the primary key. Composite keys
+    /// aren't supported for code generation in v1 (SYSTEM-DESIGN.md §11) -- callers should check this
+    /// before relying on <see cref="PrimaryKey"/>, which otherwise silently picks just the first one.</summary>
+    public bool IsCompositeKey => Properties.Count(p => p.IsPrimaryKey) > 1;
+
     public PropertyMetadata PrimaryKey => Properties.First(p => p.IsPrimaryKey);
 }
 

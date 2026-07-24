@@ -4,6 +4,11 @@
     <ProjectReference Include="..\DotNetScaffold.Abstractions\DotNetScaffold.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.29" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.29" />
+  </ItemGroup>
+
   <PropertyGroup>
   </PropertyGroup>
 
