@@ -1,0 +1,14 @@
+namespace {{ Namespace }};
+
+public sealed class {{ EntityName }}Dto
+{
+{{ for prop in ScalarProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+{{ for prop in FlattenedReferenceProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+{{ for coll in ChildCollections }}
+    public ICollection<{{ coll.ChildListDtoTypeName }}> {{ coll.PropertyName }} { get; set; } = new List<{{ coll.ChildListDtoTypeName }}>();
+{{ end }}
+}

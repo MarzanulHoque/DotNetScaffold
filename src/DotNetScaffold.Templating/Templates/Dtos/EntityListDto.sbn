@@ -1,0 +1,11 @@
+namespace {{ Namespace }};
+
+public sealed class {{ EntityName }}ListDto
+{
+{{ for prop in ScalarProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+{{ for prop in FlattenedReferenceProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+}

@@ -1,0 +1,8 @@
+namespace {{ Namespace }};
+
+public sealed class Create{{ EntityName }}Dto
+{
+{{ for prop in CreateProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+}

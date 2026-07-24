@@ -1,0 +1,8 @@
+namespace {{ Namespace }};
+
+public sealed class Update{{ EntityName }}Dto
+{
+{{ for prop in UpdateProperties }}
+    public {{ prop.CSharpTypeName }} {{ prop.Name }} { get; set; }{{ if prop.CSharpTypeName == "string" }} = string.Empty;{{ end }}
+{{ end }}
+}
