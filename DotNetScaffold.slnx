@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/SampleBlog/SampleBlog.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/DotNetScaffold.Abstractions/DotNetScaffold.Abstractions.csproj" />
     <Project Path="src/DotNetScaffold.Cli/DotNetScaffold.Cli.csproj" />
