@@ -1,0 +1,6 @@
+namespace {{ Namespace }};
+
+/// <summary>Stable anchor type used by the ArchitectureTests project to resolve this layer's assembly.</summary>
+public sealed class {{ ClassName }}
+{
+}

@@ -1,86 +1,94 @@
 # DotNetScaffold
 
-A .NET global CLI tool (distributed as a `dotnet tool` via NuGet) that scaffolds new backend solutions
-and generates CRUD code (DTOs, services/repositories, controllers, and tests) from an existing EF Core
-`DbContext`. It supports two architectural styles:
+DotNetScaffold is a command-line tool that scaffolds a new ASP.NET Core backend solution for you, and
+then generates the repetitive CRUD code — DTOs, services, repositories, controllers, and tests — for
+each entity in your database model. Instead of hand-writing the same DTO/service/controller/test
+pattern for every entity, you describe your data once (as an EF Core `DbContext`) and let the tool
+produce the rest.
 
-- **Layered monolith** (`--type layered`) — repository-pattern DAL/BLL/API projects.
-- **Clean Architecture** (`--type cleanarchitecture`) — Domain/Application/Infrastructure/Web projects.
+It supports two ways of structuring your backend:
 
-Every scaffolded solution also gets an `ArchitectureTests` project (using
-[NetArchTest.Rules](https://github.com/BenMorris/NetArchTest)) that fails `dotnet test` if a later code
-change violates the chosen architecture's dependency-direction rules (e.g. DAL referencing BLL, or
-Application referencing Infrastructure).
+- **Layered monolith** — a classic DAL / BLL / API split using the repository pattern.
+- **Clean Architecture** — Domain / Application / Infrastructure / Web, with dependencies pointing
+  inward toward Domain.
 
-> **Status:** v1 under active development. See milestones below for what's implemented so far.
+Whichever you pick, your solution also comes with a set of **architecture tests** that run alongside
+your normal test suite. If you (or a teammate, or an AI assistant) later add code that breaks the
+layering rules — say, the data layer starts calling into the business layer — those tests fail, so the
+mistake is caught by `dotnet test` instead of slipping into a code review.
+
+> **Status**: actively being built. Some commands described below are still stubs while the underlying
+> pieces are implemented — check `PROGRESS-TRACKER.md` for what's working today.
 
 ## Requirements
 
-- .NET 8 SDK (this repo targets `net8.0`; a newer SDK side-by-side is fine)
-- A target project using ASP.NET Core 8 + EF Core 8+ (for `generate`, the target project must build
-  successfully — metadata is read from the built assembly, not parsed from source)
+- .NET 8 SDK
+- Your own project should target ASP.NET Core 8 and EF Core 8+
+- Before running `generate`, your project needs to build successfully — the tool reads your entity model
+  from the compiled output, not by parsing source code
 
-## Usage
+## Getting started
 
-```bash
-# Scaffold a new solution
-dnscaffold new --type layered --name MyApp [--output ./path]
-dnscaffold new --type cleanarchitecture --name MyApp [--output ./path]
-
-# Generate CRUD for one entity, or all entities, from the DbContext
-dnscaffold generate --entity Author
-dnscaffold generate --all
-dnscaffold generate --entity Author --force   # overwrite existing generated files
-```
-
-`new` writes a `.yourtool.json` config file at the solution root recording the architecture type and
-layer project paths, so `generate` doesn't need `--type` repeated.
-
-## Repository layout
-
-```
-src/
-  DotNetScaffold.Abstractions/   Shared models: ArchitectureType, ToolConfig, EntityMetadata, etc.
-  DotNetScaffold.Metadata/       Loads the target project's built assembly and reads EF Core's IModel.
-  DotNetScaffold.Templating/     Scriban-based template engine wrapper.
-  DotNetScaffold.Scaffolding/    `new` — solution/project scaffolding per architecture.
-  DotNetScaffold.Generation/     `generate` — per-entity CRUD generation, idempotency, transactional writes.
-  DotNetScaffold.Cli/            System.CommandLine command tree and composition root.
-templates/                      Externalized .sbn (Scriban) code templates.
-tests/                          Unit + end-to-end integration test projects, one per src/ project plus
-                                 a Cli.IntegrationTests project that scaffolds + generates + builds real output.
-samples/                        Sample EF Core DbContext fixtures used by tests and manual trial runs.
-```
-
-## Design decisions (v1)
-
-- **Idempotency**: generated classes that carry custom logic (currently: services) are split into a
-  `{Entity}Service.Generated.cs` partial (always rewritten under `--force`) and a `{Entity}Service.cs`
-  partial (created once, never touched again on regeneration).
-- **Error handling**: services throw typed exceptions (e.g. `NotFoundException`); no `Result<T>` wrapper.
-- **Repository granularity** (layered template): one generic `IRepository<T>`/`Repository<T>`, plus a
-  thin per-entity `I{Entity}Repository : IRepository<Entity>` marker interface.
-- **Test seeding**: generated tests include a minimal auto-seed (one valid entity instance, plus one
-  related child/parent for relationships) so they pass out of the box.
-- **Many-to-many relationships**: detected and skipped with a logged warning, never an error (out of
-  scope for v1, per the SRS).
-
-## Build & test
+Once published, you'll install it like any other global tool:
 
 ```bash
-dotnet build
-dotnet test
+dotnet tool install -g DotNetScaffold.Tool
 ```
 
-## Milestones
+Until then, you can build and run it directly from source:
 
-- [x] M0 — Repo + CLI skeleton (`new`/`generate` commands, `--help`, validation)
-- [ ] M1 — `new --type layered` full scaffolding + ArchitectureTests
-- [ ] M2 — `new --type cleanarchitecture` full scaffolding + ArchitectureTests
-- [ ] M3 — EF Core metadata reader
-- [ ] M4 — Scriban templating engine + DTO generation
-- [ ] M5 — Layered `generate` output
-- [ ] M6 — Clean-architecture `generate` output
-- [ ] M7 — `--force` / transactional writer / many-to-many skip+warn
-- [ ] M8 — End-to-end integration tests
-- [ ] M9 — Pack as a `dotnet tool`
+```bash
+dotnet run --project src/DotNetScaffold.Cli -- <command> [options]
+```
+
+## Scaffolding a new solution
+
+```bash
+dnscaffold new --type layered --name MyApp
+# or
+dnscaffold new --type cleanarchitecture --name MyApp
+```
+
+This creates a `MyApp/` folder containing a ready-to-build solution: the project set for whichever
+architecture you chose, matching test projects, an `ArchitectureTests` project, and a small
+`.yourtool.json` file at the solution root. That file just remembers which architecture you picked and
+where things live, so you don't have to repeat `--type` on every later command — you won't normally need
+to open or edit it yourself.
+
+From here, you add your own entity classes and register them on the generated `DbContext` as you
+normally would, then build the project.
+
+## Generating CRUD for your entities
+
+Once your `DbContext` builds successfully with your entities in place:
+
+```bash
+dnscaffold generate --entity Author      # generate CRUD for a single entity
+dnscaffold generate --all                # generate CRUD for every entity in your DbContext
+dnscaffold generate --entity Author --force   # regenerate, overwriting previously generated files
+```
+
+For each entity this produces: a detail DTO and a list DTO, create/update DTOs, a
+repository/service layer (matching whichever architecture you scaffolded), a controller, and a test
+project pre-populated with sample data so the tests pass out of the box.
+
+If you've added your own logic to a generated service, it's safe to re-run `generate --force` later —
+your hand-written code lives in its own file and is never touched by regeneration.
+
+One-to-many, one-to-one, and self-referencing relationships are all handled. Many-to-many relationships
+aren't supported yet — the tool will skip generating that relationship and print a warning rather than
+failing.
+
+## Why the architecture tests matter
+
+Every scaffolded solution includes a test project that checks your project's actual compiled dependency
+graph against the rules of the architecture you chose (e.g. your data-access project must never
+reference your business-logic project). It runs as part of `dotnet test`, so it's part of your normal
+build feedback loop, not an extra step you have to remember to run.
+
+## Current limitations (v1)
+
+- Many-to-many relationships are skipped with a warning, not generated
+- Your project must build before `generate` can read its entity model
+- Composite (multi-column) primary keys aren't supported yet
+- CQRS/MediatR-style generation, database migrations, and frontend code generation are not in scope

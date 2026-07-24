@@ -51,7 +51,7 @@ public static class NewCommandFactory
                 Console.WriteLine($"Scaffolded '{name}' ({typeValue}) into {output}.");
                 return 0;
             }
-            catch (NotImplementedException ex)
+            catch (Exception ex) when (ex is NotImplementedException or InvalidOperationException)
             {
                 Console.Error.WriteLine($"error: {ex.Message}");
                 return 1;

@@ -1,0 +1,50 @@
+using FluentAssertions;
+using NetArchTest.Rules;
+using {{ Name }}.BLL;
+using {{ Name }}.DAL;
+
+namespace {{ Name }}.ArchitectureTests;
+
+/// <summary>
+/// Fitness functions for the layered (DAL/BLL/API) architecture: dependencies must only point
+/// "inward" — API depends on BLL, BLL depends on DAL, and never the other way around. Run as part of
+/// `dotnet test`, so a change that violates the layering fails the build, not just code review.
+/// </summary>
+public class LayeredArchitectureTests
+{
+    private const string BllNamespace = "{{ Name }}.BLL";
+    private const string ApiNamespace = "{{ Name }}.API";
+
+    [Fact]
+    public void Dal_Should_Not_Depend_On_Bll_Or_Api()
+    {
+        var result = Types.InAssembly(typeof(DalAssemblyReference).Assembly)
+            .Should()
+            .NotHaveDependencyOnAny(BllNamespace, ApiNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(FormatFailures(result));
+    }
+
+    [Fact]
+    public void Bll_Should_Not_Depend_On_Api()
+    {
+        var result = Types.InAssembly(typeof(BllAssemblyReference).Assembly)
+            .Should()
+            .NotHaveDependencyOn(ApiNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(FormatFailures(result));
+    }
+
+    private static string FormatFailures(TestResult result)
+    {
+        if (result.FailingTypes is null)
+        {
+            return "Architecture rule violated.";
+        }
+
+        var offenders = result.FailingTypes.Select(t => t.FullName);
+        return "Architecture rule violated by: " + string.Join(", ", offenders);
+    }
+}

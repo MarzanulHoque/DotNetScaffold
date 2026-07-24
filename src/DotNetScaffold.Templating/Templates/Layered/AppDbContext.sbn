@@ -1,0 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace {{ Name }}.DAL;
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
+    // Add DbSet<TEntity> properties here as you add entities, e.g.:
+    // public DbSet<Author> Authors => Set<Author>();
+}

@@ -1,0 +1,35 @@
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using {{ Name }}.BLL;
+using {{ Name }}.DAL;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = exception switch
+        {
+            NotFoundException => StatusCodes.Status404NotFound,
+            _ => StatusCodes.Status500InternalServerError,
+        };
+        await context.Response.WriteAsJsonAsync(new { error = exception?.Message ?? "An unexpected error occurred." });
+    });
+});
+
+app.MapControllers();
+
+app.Run();
