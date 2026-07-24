@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DotNetScaffold.Abstractions/DotNetScaffold.Abstractions.csproj" />
+    <Project Path="src/DotNetScaffold.Cli/DotNetScaffold.Cli.csproj" />
+    <Project Path="src/DotNetScaffold.Generation/DotNetScaffold.Generation.csproj" />
+    <Project Path="src/DotNetScaffold.Metadata/DotNetScaffold.Metadata.csproj" />
+    <Project Path="src/DotNetScaffold.Scaffolding/DotNetScaffold.Scaffolding.csproj" />
+    <Project Path="src/DotNetScaffold.Templating/DotNetScaffold.Templating.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DotNetScaffold.Cli.IntegrationTests/DotNetScaffold.Cli.IntegrationTests.csproj" />
+    <Project Path="tests/DotNetScaffold.Generation.Tests/DotNetScaffold.Generation.Tests.csproj" />
+    <Project Path="tests/DotNetScaffold.Metadata.Tests/DotNetScaffold.Metadata.Tests.csproj" />
+    <Project Path="tests/DotNetScaffold.Scaffolding.Tests/DotNetScaffold.Scaffolding.Tests.csproj" />
+  </Folder>
+</Solution>

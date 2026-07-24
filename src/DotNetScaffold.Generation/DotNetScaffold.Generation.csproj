@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotNetScaffold.Abstractions\DotNetScaffold.Abstractions.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Metadata\DotNetScaffold.Metadata.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Templating\DotNetScaffold.Templating.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+## .NET
+bin/
+obj/
+*.user
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Test / coverage output
+TestResults/
+*.trx
+
+## Tool-generated sample output (created by manual trial runs, not part of source)
+/playground/

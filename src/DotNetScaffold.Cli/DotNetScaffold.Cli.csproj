@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotNetScaffold.Abstractions\DotNetScaffold.Abstractions.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Metadata\DotNetScaffold.Metadata.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Templating\DotNetScaffold.Templating.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Scaffolding\DotNetScaffold.Scaffolding.csproj" />
+    <ProjectReference Include="..\DotNetScaffold.Generation\DotNetScaffold.Generation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+</Project>
