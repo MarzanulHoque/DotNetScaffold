@@ -1,11 +1,19 @@
 using System.CommandLine;
+using System.Text.RegularExpressions;
 using DotNetScaffold.Abstractions;
 using DotNetScaffold.Scaffolding;
 
 namespace DotNetScaffold.Cli.Commands;
 
-public static class NewCommandFactory
+public static partial class NewCommandFactory
 {
+    // A dotted identifier, e.g. "MyApp" or "MyCompany.MyApp" — becomes the generated root namespace, so
+    // it must be valid C#. This also rules out path separators and "..", which is what --name/--output
+    // get combined into a filesystem path with; without this check a --name like "../../etc" could steer
+    // Path.Combine(output, name) outside the intended output directory.
+    [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")]
+    private static partial Regex SolutionNamePattern();
+
     public static Command Create(ISolutionScaffolder scaffolder)
     {
         var typeOption = new Option<string>("--type")
@@ -40,6 +48,15 @@ public static class NewCommandFactory
             {
                 Console.Error.WriteLine(
                     $"error: unknown --type '{typeValue}'. Expected 'layered' or 'cleanarchitecture'.");
+                return 1;
+            }
+
+            if (!SolutionNamePattern().IsMatch(name))
+            {
+                Console.Error.WriteLine(
+                    $"error: invalid --name '{name}'. It becomes the generated root namespace, so it must " +
+                    "look like a C# identifier (letters, digits, underscores, dot-separated), e.g. 'MyApp' " +
+                    "or 'MyCompany.MyApp' — no path separators.");
                 return 1;
             }
 
