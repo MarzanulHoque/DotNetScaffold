@@ -7,7 +7,7 @@ using DotNetScaffold.Templating;
 
 ISolutionScaffolder scaffolder = new DispatchingSolutionScaffolder(
     layered: new LayeredSolutionScaffolder(new DotnetCliRunner(), new ScribanTemplateEngine()),
-    cleanArchitecture: new NotImplementedSolutionScaffolder());
+    cleanArchitecture: new CleanArchitectureSolutionScaffolder(new DotnetCliRunner(), new ScribanTemplateEngine()));
 ICrudGenerator generator = new NotImplementedCrudGenerator();
 
 var rootCommand = new RootCommand("DotNetScaffold - scaffold backend solutions and generate CRUD from an EF Core DbContext.");

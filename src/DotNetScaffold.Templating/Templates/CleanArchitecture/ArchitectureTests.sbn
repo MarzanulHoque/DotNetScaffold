@@ -1,0 +1,64 @@
+using FluentAssertions;
+using NetArchTest.Rules;
+using {{ Name }}.Application;
+using {{ Name }}.Domain;
+using {{ Name }}.Infrastructure;
+
+namespace {{ Name }}.ArchitectureTests;
+
+/// <summary>
+/// Fitness functions for Clean Architecture: dependencies must only point inward, toward Domain.
+/// Domain has zero dependency on any other layer; Application depends only on Domain; Infrastructure
+/// depends on Domain/Application; Web (the composition root) may depend on all three. Run as part of
+/// `dotnet test`, so a change that violates the layering fails the build, not just code review.
+/// </summary>
+public class CleanArchitectureTests
+{
+    private const string ApplicationNamespace = "{{ Name }}.Application";
+    private const string InfrastructureNamespace = "{{ Name }}.Infrastructure";
+    private const string WebNamespace = "{{ Name }}.Web";
+
+    [Fact]
+    public void Domain_Should_Have_No_Dependency_On_Application_Infrastructure_Or_Web()
+    {
+        var result = Types.InAssembly(typeof(DomainAssemblyReference).Assembly)
+            .Should()
+            .NotHaveDependencyOnAny(ApplicationNamespace, InfrastructureNamespace, WebNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(FormatFailures(result));
+    }
+
+    [Fact]
+    public void Application_Should_Not_Depend_On_Infrastructure_Or_Web()
+    {
+        var result = Types.InAssembly(typeof(ApplicationAssemblyReference).Assembly)
+            .Should()
+            .NotHaveDependencyOnAny(InfrastructureNamespace, WebNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(FormatFailures(result));
+    }
+
+    [Fact]
+    public void Infrastructure_Should_Not_Depend_On_Web()
+    {
+        var result = Types.InAssembly(typeof(InfrastructureAssemblyReference).Assembly)
+            .Should()
+            .NotHaveDependencyOn(WebNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(FormatFailures(result));
+    }
+
+    private static string FormatFailures(TestResult result)
+    {
+        if (result.FailingTypes is null)
+        {
+            return "Architecture rule violated.";
+        }
+
+        var offenders = result.FailingTypes.Select(t => t.FullName);
+        return "Architecture rule violated by: " + string.Join(", ", offenders);
+    }
+}

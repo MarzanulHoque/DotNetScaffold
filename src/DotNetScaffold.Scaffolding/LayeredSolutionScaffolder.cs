@@ -96,7 +96,7 @@ public sealed class LayeredSolutionScaffolder : ISolutionScaffolder
 
         var nameModel = new { Name = solutionName };
 
-        WriteFile(Path.Combine(solutionRoot, dalDir, "AppDbContext.cs"), _templateEngine.Render("Layered/AppDbContext.sbn", nameModel));
+        WriteFile(Path.Combine(solutionRoot, dalDir, "AppDbContext.cs"), _templateEngine.Render("Common/AppDbContext.sbn", new { Namespace = dalName }));
         WriteFile(Path.Combine(solutionRoot, dalDir, "IRepository.cs"), _templateEngine.Render("Layered/IRepository.sbn", nameModel));
         WriteFile(Path.Combine(solutionRoot, dalDir, "Repository.cs"), _templateEngine.Render("Layered/Repository.sbn", nameModel));
         WriteFile(Path.Combine(solutionRoot, dalDir, "IUnitOfWork.cs"), _templateEngine.Render("Layered/IUnitOfWork.sbn", nameModel));
@@ -105,7 +105,7 @@ public sealed class LayeredSolutionScaffolder : ISolutionScaffolder
             Path.Combine(solutionRoot, dalDir, "DalAssemblyReference.cs"),
             _templateEngine.Render("Common/AssemblyReference.sbn", new { Namespace = dalName, ClassName = "DalAssemblyReference" }));
 
-        WriteFile(Path.Combine(solutionRoot, bllDir, "NotFoundException.cs"), _templateEngine.Render("Layered/NotFoundException.sbn", nameModel));
+        WriteFile(Path.Combine(solutionRoot, bllDir, "NotFoundException.cs"), _templateEngine.Render("Common/NotFoundException.sbn", new { Namespace = bllName }));
         WriteFile(
             Path.Combine(solutionRoot, bllDir, "BllAssemblyReference.cs"),
             _templateEngine.Render("Common/AssemblyReference.sbn", new { Namespace = bllName, ClassName = "BllAssemblyReference" }));
@@ -114,7 +114,7 @@ public sealed class LayeredSolutionScaffolder : ISolutionScaffolder
             Path.Combine(solutionRoot, apiDir, "ApiAssemblyReference.cs"),
             _templateEngine.Render("Common/AssemblyReference.sbn", new { Namespace = apiName, ClassName = "ApiAssemblyReference" }));
         WriteFile(Path.Combine(solutionRoot, apiDir, "Program.cs"), _templateEngine.Render("Layered/Program.sbn", nameModel));
-        WriteFile(Path.Combine(solutionRoot, apiDir, "appsettings.json"), _templateEngine.Render("Layered/appsettings.sbn", nameModel));
+        WriteFile(Path.Combine(solutionRoot, apiDir, "appsettings.json"), _templateEngine.Render("Common/appsettings.sbn", nameModel));
 
         WriteFile(Path.Combine(solutionRoot, archTestsDir, "LayeredArchitectureTests.cs"), _templateEngine.Render("Layered/ArchitectureTests.sbn", nameModel));
 
