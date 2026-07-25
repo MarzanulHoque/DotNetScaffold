@@ -50,54 +50,9 @@ public sealed class EntityDtoViewModelBuilder : IEntityDtoViewModelBuilder
 
     private static DtoPropertyViewModel? BuildFlattenedReference(NavigationMetadata navigation, DbContextModelMetadata model)
     {
-        var relatedEntity = model.Entities.FirstOrDefault(e => e.ClrName == navigation.RelatedEntityClrName);
-        if (relatedEntity is null)
-        {
-            return null;
-        }
-
-        var displayProperty = SelectDisplayProperty(relatedEntity);
-        var isFallbackToPrimaryKey = false;
-
-        if (displayProperty is null)
-        {
-            if (navigation.ForeignKeyPropertyName is not null)
-            {
-                // This entity already holds the FK scalar itself (e.g. Post.AuthorId) -- that's already
-                // present in ScalarProperties, so there's nothing useful left to flatten.
-                return null;
-            }
-
-            // This is the principal side of a one-to-one with no string display property on the
-            // dependent (e.g. Post -> PostDetail, which only has Id/PostId/ViewCount) -- without some
-            // fallback, this DTO would give zero indication the related row even exists. Fall back to
-            // the related row's own primary key so callers can at least detect/fetch it.
-            displayProperty = relatedEntity.Properties.FirstOrDefault(p => p.IsPrimaryKey);
-            isFallbackToPrimaryKey = true;
-            if (displayProperty is null)
-            {
-                return null;
-            }
-        }
-
-        // A flattened field is nullable whenever the relationship itself is optional, even if the
-        // underlying display property (e.g. Name) is not -- the navigation might legitimately be absent.
-        // The principal side of a one-to-one is always treated as optional here regardless of the FK's
-        // own IsRequired: IsRequired only guarantees the dependent's FK is non-null *if that dependent
-        // row exists* -- it says nothing about whether a dependent row exists at all for this principal.
-        var isNullable = displayProperty.IsNullable || !navigation.IsRequired || isFallbackToPrimaryKey;
-        var typeName = isNullable ? $"{displayProperty.ClrTypeName}?" : displayProperty.ClrTypeName;
-
-        return new DtoPropertyViewModel($"{navigation.PropertyName}{displayProperty.Name}", typeName);
+        var flattened = ReferenceNavigationFlattener.Flatten(navigation, model);
+        return flattened is null ? null : new DtoPropertyViewModel(flattened.FlattenedFieldName, flattened.FlattenedFieldCSharpTypeName);
     }
-
-    /// <summary>Picks which scalar property of a related entity best represents it in a flattened field:
-    /// "Name", then "Title", then the first non-key string property, else none (in which case
-    /// <see cref="BuildFlattenedReference"/> may still fall back to the related entity's own PK).</summary>
-    private static PropertyMetadata? SelectDisplayProperty(EntityMetadata entity) =>
-        entity.Properties.FirstOrDefault(p => p.Name == "Name")
-        ?? entity.Properties.FirstOrDefault(p => p.Name == "Title")
-        ?? entity.Properties.FirstOrDefault(p => p.ClrTypeName == "string" && !p.IsPrimaryKey && !p.IsForeignKey);
 
     private static DtoPropertyViewModel ToPropertyViewModel(PropertyMetadata property) =>
         new(property.Name, property.IsNullable ? $"{property.ClrTypeName}?" : property.ClrTypeName);
