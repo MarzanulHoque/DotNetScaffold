@@ -1,0 +1,114 @@
+using {{ DalNamespace }};
+{{ if EntityNamespace != DalNamespace }}
+using {{ EntityNamespace }};
+{{ end }}
+
+namespace {{ BllNamespace }};
+
+public partial class {{ EntityName }}Service
+{
+    private readonly IUnitOfWork _unitOfWork;
+
+    public {{ EntityName }}Service(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<{{ EntityName }}Dto> GetByIdAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default)
+    {
+        var repository = _unitOfWork.Repository<{{ EntityName }}>();
+        var entity = await repository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+{{ for nav in ReferenceNavigations }}
+        await repository.LoadReferenceAsync(entity, e => e.{{ nav.NavigationPropertyName }}, cancellationToken);
+{{ end }}
+{{ for coll in ChildCollections }}
+        await repository.LoadCollectionAsync(entity, e => e.{{ coll.NavigationPropertyName }}, cancellationToken);
+{{ end }}
+        return ToDto(entity);
+    }
+
+    public async Task<IReadOnlyList<{{ EntityName }}ListDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var repository = _unitOfWork.Repository<{{ EntityName }}>();
+        var entities = await repository.GetAllAsync(cancellationToken);
+{{ if ReferenceNavigations.size > 0 }}
+        foreach (var entity in entities)
+        {
+{{ for nav in ReferenceNavigations }}
+            await repository.LoadReferenceAsync(entity, e => e.{{ nav.NavigationPropertyName }}, cancellationToken);
+{{ end }}
+        }
+{{ end }}
+        return entities.Select(ToListDto).ToList();
+    }
+
+    public async Task<{{ EntityName }}Dto> CreateAsync(Create{{ EntityName }}Dto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new {{ EntityName }}
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = dto.{{ prop.Name }},
+{{ end }}
+        };
+
+        await _unitOfWork.Repository<{{ EntityName }}>().AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToDto(entity);
+    }
+
+    public async Task UpdateAsync({{ PrimaryKeyCSharpTypeName }} id, Update{{ EntityName }}Dto dto, CancellationToken cancellationToken = default)
+    {
+        var repository = _unitOfWork.Repository<{{ EntityName }}>();
+        var entity = await repository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+
+{{ for prop in CreateOrUpdateProperties }}
+        entity.{{ prop.Name }} = dto.{{ prop.Name }};
+{{ end }}
+
+        repository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default)
+    {
+        var repository = _unitOfWork.Repository<{{ EntityName }}>();
+        var entity = await repository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+
+        repository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private static {{ EntityName }}Dto ToDto({{ EntityName }} entity) => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = entity.{{ prop.Name }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.FlattenedFieldName }} = entity.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+{{ for coll in ChildCollections }}
+        {{ coll.NavigationPropertyName }} = entity.{{ coll.NavigationPropertyName }}.Select(child => new {{ coll.ChildListDtoTypeName }}
+        {
+{{ for prop in coll.ChildScalarProperties }}
+            {{ prop.Name }} = child.{{ prop.Name }},
+{{ end }}
+{{ for nav in coll.ChildReferenceNavigations }}
+            {{ nav.FlattenedFieldName }} = child.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+        }).ToList(),
+{{ end }}
+    };
+
+    private static {{ EntityName }}ListDto ToListDto({{ EntityName }} entity) => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = entity.{{ prop.Name }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.FlattenedFieldName }} = entity.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+    };
+}

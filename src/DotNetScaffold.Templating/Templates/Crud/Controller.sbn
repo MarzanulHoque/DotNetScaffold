@@ -1,0 +1,49 @@
+using Microsoft.AspNetCore.Mvc;
+using {{ BllNamespace }};
+
+namespace {{ ApiNamespace }}.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class {{ EntityName }}Controller : ControllerBase
+{
+    private readonly {{ EntityName }}Service _service;
+
+    public {{ EntityName }}Controller({{ EntityName }}Service service)
+    {
+        _service = service;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<{{ EntityName }}ListDto>>> GetAll(CancellationToken cancellationToken)
+    {
+        return Ok(await _service.GetAllAsync(cancellationToken));
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<{{ EntityName }}Dto>> GetById({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken)
+    {
+        return Ok(await _service.GetByIdAsync(id, cancellationToken));
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<{{ EntityName }}Dto>> Create(Create{{ EntityName }}Dto dto, CancellationToken cancellationToken)
+    {
+        var result = await _service.CreateAsync(dto, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = result.{{ PrimaryKeyPropertyName }} }, result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update({{ PrimaryKeyCSharpTypeName }} id, Update{{ EntityName }}Dto dto, CancellationToken cancellationToken)
+    {
+        await _service.UpdateAsync(id, dto, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken)
+    {
+        await _service.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+}

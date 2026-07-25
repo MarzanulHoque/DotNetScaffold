@@ -1,0 +1,152 @@
+using System.Linq.Expressions;
+using {{ DalNamespace }};
+using {{ BllNamespace }};
+{{ if EntityNamespace != DalNamespace }}
+using {{ EntityNamespace }};
+{{ end }}
+using FluentAssertions;
+using Moq;
+
+namespace {{ TestsBllNamespace }};
+
+/// <summary>
+/// Moq-based: {{ EntityName }}Service depends only on IUnitOfWork/IRepository, both mockable interfaces,
+/// so its CRUD logic can be tested in isolation without a real DbContext.
+/// </summary>
+public class {{ EntityName }}ServiceTests
+{
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<IRepository<{{ EntityName }}>> _repositoryMock = new();
+    private readonly {{ EntityName }}Service _service;
+
+    public {{ EntityName }}ServiceTests()
+    {
+        _unitOfWorkMock.Setup(u => u.Repository<{{ EntityName }}>()).Returns(_repositoryMock.Object);
+{{ for nav in ReferenceNavigations }}
+        _repositoryMock
+            .Setup(r => r.LoadReferenceAsync(It.IsAny<{{ EntityName }}>(), It.IsAny<Expression<Func<{{ EntityName }}, {{ nav.RelatedEntityClrName }}?>>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+{{ end }}
+{{ for coll in ChildCollections }}
+        _repositoryMock
+            .Setup(r => r.LoadCollectionAsync(It.IsAny<{{ EntityName }}>(), It.IsAny<Expression<Func<{{ EntityName }}, IEnumerable<{{ coll.ChildEntityClrName }}>>>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+{{ end }}
+        _service = new {{ EntityName }}Service(_unitOfWorkMock.Object);
+    }
+
+    private static {{ EntityName }} CreateSeedEntity() => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.NavigationPropertyName }} = new {{ nav.RelatedEntityClrName }} { {{ nav.RelatedDisplayPropertyName }} = {{ nav.RelatedDisplayPropertySampleValueLiteral }} },
+{{ end }}
+    };
+
+    [Fact]
+    public async Task GetByIdAsync_WhenEntityExists_ReturnsMappedDto()
+    {
+        var entity = CreateSeedEntity();
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+
+        var result = await _service.GetByIdAsync({{ PrimaryKeySampleValueLiteral }});
+
+        result.{{ PrimaryKeyPropertyName }}.Should().Be(entity.{{ PrimaryKeyPropertyName }});
+{{ for nav in ReferenceNavigations }}
+        result.{{ nav.FlattenedFieldName }}.Should().Be(entity.{{ nav.NavigationPropertyName }}.{{ nav.RelatedDisplayPropertyName }});
+{{ end }}
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(({{ EntityName }}?)null);
+
+        var act = () => _service.GetByIdAsync({{ PrimaryKeySampleValueLiteral }});
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsAllEntitiesMappedToListDtos()
+    {
+        var entity = CreateSeedEntity();
+        _repositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([entity]);
+
+        var result = await _service.GetAllAsync();
+
+        result.Should().ContainSingle().Which.{{ PrimaryKeyPropertyName }}.Should().Be(entity.{{ PrimaryKeyPropertyName }});
+    }
+
+    [Fact]
+    public async Task CreateAsync_AddsTheMappedEntityAndSavesChanges()
+    {
+        var dto = new Create{{ EntityName }}Dto
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+        };
+
+        var result = await _service.CreateAsync(dto);
+
+        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<{{ EntityName }}>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+{{ for prop in CreateOrUpdateProperties }}
+        result.{{ prop.Name }}.Should().Be(dto.{{ prop.Name }});
+{{ end }}
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenEntityExists_UpdatesFieldsAndSavesChanges()
+    {
+        var entity = CreateSeedEntity();
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        var dto = new Update{{ EntityName }}Dto
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+        };
+
+        await _service.UpdateAsync({{ PrimaryKeySampleValueLiteral }}, dto);
+
+        _repositoryMock.Verify(r => r.Update(entity), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(({{ EntityName }}?)null);
+        var dto = new Update{{ EntityName }}Dto();
+
+        var act = () => _service.UpdateAsync({{ PrimaryKeySampleValueLiteral }}, dto);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenEntityExists_RemovesEntityAndSavesChanges()
+    {
+        var entity = CreateSeedEntity();
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+
+        await _service.DeleteAsync({{ PrimaryKeySampleValueLiteral }});
+
+        _repositoryMock.Verify(r => r.Remove(entity), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>())).ReturnsAsync(({{ EntityName }}?)null);
+
+        var act = () => _service.DeleteAsync({{ PrimaryKeySampleValueLiteral }});
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+}

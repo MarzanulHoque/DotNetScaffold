@@ -1,0 +1,8 @@
+namespace {{ Namespace }};
+
+/// <summary>Hand-edit partial -- written once by `generate` and never overwritten by later runs
+/// (including `--force`). Add custom logic here; the generated CRUD methods live in
+/// {{ EntityName }}Service.Generated.cs.</summary>
+public partial class {{ EntityName }}Service
+{
+}

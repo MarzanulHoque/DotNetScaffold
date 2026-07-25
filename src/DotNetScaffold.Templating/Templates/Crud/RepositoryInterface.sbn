@@ -1,0 +1,9 @@
+{{ if EntityNamespace != Namespace }}
+using {{ EntityNamespace }};
+
+{{ end }}
+namespace {{ Namespace }};
+
+public interface I{{ EntityName }}Repository : IRepository<{{ EntityName }}>
+{
+}

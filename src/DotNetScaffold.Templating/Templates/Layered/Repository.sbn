@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 
 namespace {{ Name }}.DAL;
@@ -18,6 +19,14 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
 
     public async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await DbSet.ToListAsync(cancellationToken);
+
+    public async Task LoadReferenceAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty?>> navigationProperty, CancellationToken cancellationToken = default)
+        where TProperty : class =>
+        await Context.Entry(entity).Reference(navigationProperty).LoadAsync(cancellationToken);
+
+    public async Task LoadCollectionAsync<TProperty>(TEntity entity, Expression<Func<TEntity, IEnumerable<TProperty>>> navigationProperty, CancellationToken cancellationToken = default)
+        where TProperty : class =>
+        await Context.Entry(entity).Collection(navigationProperty).LoadAsync(cancellationToken);
 
     public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default) =>
         await DbSet.AddAsync(entity, cancellationToken);

@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+
 namespace {{ Name }}.DAL;
 
 public interface IRepository<TEntity> where TEntity : class
@@ -5,6 +7,16 @@ public interface IRepository<TEntity> where TEntity : class
     Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Explicitly loads a reference navigation on an already-tracked entity (e.g. after
+    /// <see cref="GetByIdAsync"/>) -- used instead of eager-loading via `Include` so this stays mockable
+    /// in unit tests, which a queryable-returning method backed by `Include` would not be.</summary>
+    Task LoadReferenceAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty?>> navigationProperty, CancellationToken cancellationToken = default)
+        where TProperty : class;
+
+    /// <summary>Explicitly loads a collection navigation on an already-tracked entity. See <see cref="LoadReferenceAsync{TProperty}"/>.</summary>
+    Task LoadCollectionAsync<TProperty>(TEntity entity, Expression<Func<TEntity, IEnumerable<TProperty>>> navigationProperty, CancellationToken cancellationToken = default)
+        where TProperty : class;
 
     Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);
 
