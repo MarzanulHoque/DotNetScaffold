@@ -140,11 +140,6 @@ public sealed class CleanArchitectureCrudGenerator : IArchitectureCrudGenerator
             }
         }
 
-        foreach (var (path, content) in guardedFiles)
-        {
-            WriteFile(path, content);
-        }
-
         // Always overwritten -- this is the generated half of the service's partial-class idempotency split.
         var serviceGeneratedContent = _templateEngine.Render(
             "CleanArchitecture/ServiceGenerated.sbn",
@@ -161,7 +156,11 @@ public sealed class CleanArchitectureCrudGenerator : IArchitectureCrudGenerator
                 crudViewModel.ReferenceNavigations,
                 crudViewModel.ChildCollections,
             });
-        WriteFile(Path.Combine(solutionRoot, infrastructureDir, $"{entity.ClrName}Service.Generated.cs"), serviceGeneratedContent);
+
+        var filesToWrite = new List<(string Path, string Content)>(guardedFiles)
+        {
+            (Path.Combine(solutionRoot, infrastructureDir, $"{entity.ClrName}Service.Generated.cs"), serviceGeneratedContent),
+        };
 
         // Written once, never overwritten (even with --force) -- the hand-edit half of the split.
         var servicePartialPath = Path.Combine(solutionRoot, infrastructureDir, $"{entity.ClrName}Service.cs");
@@ -169,8 +168,12 @@ public sealed class CleanArchitectureCrudGenerator : IArchitectureCrudGenerator
         {
             var servicePartialContent = _templateEngine.Render(
                 "CleanArchitecture/ServicePartial.sbn", new { Namespace = infrastructureName, EntityName = entity.ClrName });
-            WriteFile(servicePartialPath, servicePartialContent);
+            filesToWrite.Add((servicePartialPath, servicePartialContent));
         }
+
+        // Written as one transaction per entity (SYSTEM-DESIGN.md §5.2 step 4 / §8 "Reliability"): if any
+        // file in this entity's set fails to write, every file already written by this call rolls back.
+        TransactionalFileWriter.WriteAll(filesToWrite);
 
         ProgramCsRegistrar.EnsureServiceRegistered(Path.Combine(solutionRoot, webDir, "Program.cs"), applicationName, infrastructureName, entity.ClrName);
     }
@@ -193,10 +196,4 @@ public sealed class CleanArchitectureCrudGenerator : IArchitectureCrudGenerator
         Path.GetDirectoryName(ToPlatformPath(csprojRelativePath)) ?? string.Empty;
 
     private static string ToPlatformPath(string forwardSlashPath) => forwardSlashPath.Replace('/', Path.DirectorySeparatorChar);
-
-    private static void WriteFile(string path, string content)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, content);
-    }
 }
