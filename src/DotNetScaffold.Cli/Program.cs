@@ -1,6 +1,7 @@
 using System.CommandLine;
 using DotNetScaffold.Cli.Commands;
 using DotNetScaffold.Generation;
+using DotNetScaffold.Generation.CleanArchitecture;
 using DotNetScaffold.Generation.Crud;
 using DotNetScaffold.Generation.Dtos;
 using DotNetScaffold.Generation.Layered;
@@ -22,7 +23,12 @@ ICrudGenerator generator = new DispatchingCrudGenerator(
         new DtoGenerator(templateEngine, new EntityDtoViewModelBuilder()),
         new EntityCrudViewModelBuilder(),
         templateEngine),
-    cleanArchitecture: new NotImplementedArchitectureCrudGenerator());
+    cleanArchitecture: new CleanArchitectureCrudGenerator(
+        new TargetAssemblyLocator(),
+        modelReader,
+        new DtoGenerator(templateEngine, new EntityDtoViewModelBuilder()),
+        new EntityCrudViewModelBuilder(),
+        templateEngine));
 
 var rootCommand = new RootCommand("DotNetScaffold - scaffold backend solutions and generate CRUD from an EF Core DbContext.");
 rootCommand.Subcommands.Add(NewCommandFactory.Create(scaffolder));

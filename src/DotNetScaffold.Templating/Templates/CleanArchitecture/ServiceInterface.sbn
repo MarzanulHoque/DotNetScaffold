@@ -1,0 +1,14 @@
+namespace {{ ApplicationNamespace }};
+
+public interface I{{ EntityName }}Service
+{
+    Task<{{ EntityName }}Dto> GetByIdAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<{{ EntityName }}ListDto>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    Task<{{ EntityName }}Dto> CreateAsync(Create{{ EntityName }}Dto dto, CancellationToken cancellationToken = default);
+
+    Task UpdateAsync({{ PrimaryKeyCSharpTypeName }} id, Update{{ EntityName }}Dto dto, CancellationToken cancellationToken = default);
+
+    Task DeleteAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default);
+}

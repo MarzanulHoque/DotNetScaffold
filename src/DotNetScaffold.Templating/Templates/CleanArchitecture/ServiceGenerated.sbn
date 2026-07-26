@@ -1,0 +1,108 @@
+using Microsoft.EntityFrameworkCore;
+using {{ ApplicationNamespace }};
+{{ if EntityNamespace != InfrastructureNamespace }}
+using {{ EntityNamespace }};
+{{ end }}
+
+namespace {{ InfrastructureNamespace }};
+
+public partial class {{ EntityName }}Service : I{{ EntityName }}Service
+{
+    private readonly AppDbContext _dbContext;
+
+    public {{ EntityName }}Service(AppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<{{ EntityName }}Dto> GetByIdAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default)
+    {
+        var entity = await Query().FirstOrDefaultAsync(e => e.{{ PrimaryKeyPropertyName }} == id, cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+        return ToDto(entity);
+    }
+
+    public async Task<IReadOnlyList<{{ EntityName }}ListDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await Query().ToListAsync(cancellationToken);
+        return entities.Select(ToListDto).ToList();
+    }
+
+    public async Task<{{ EntityName }}Dto> CreateAsync(Create{{ EntityName }}Dto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new {{ EntityName }}
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = dto.{{ prop.Name }},
+{{ end }}
+        };
+
+        _dbContext.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToDto(entity);
+    }
+
+    public async Task UpdateAsync({{ PrimaryKeyCSharpTypeName }} id, Update{{ EntityName }}Dto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.Set<{{ EntityName }}>().FindAsync([id], cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+
+{{ for prop in CreateOrUpdateProperties }}
+        entity.{{ prop.Name }} = dto.{{ prop.Name }};
+{{ end }}
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync({{ PrimaryKeyCSharpTypeName }} id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.Set<{{ EntityName }}>().FindAsync([id], cancellationToken)
+            ?? throw new NotFoundException($"{{ EntityName }} with id '{id}' was not found.");
+
+        _dbContext.Remove(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private IQueryable<{{ EntityName }}> Query()
+    {
+        IQueryable<{{ EntityName }}> query = _dbContext.Set<{{ EntityName }}>();
+{{ for nav in ReferenceNavigations }}
+        query = query.Include(e => e.{{ nav.NavigationPropertyName }});
+{{ end }}
+{{ for coll in ChildCollections }}
+        query = query.Include(e => e.{{ coll.NavigationPropertyName }});
+{{ end }}
+        return query;
+    }
+
+    private static {{ EntityName }}Dto ToDto({{ EntityName }} entity) => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = entity.{{ prop.Name }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.FlattenedFieldName }} = entity.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+{{ for coll in ChildCollections }}
+        {{ coll.NavigationPropertyName }} = entity.{{ coll.NavigationPropertyName }}.Select(child => new {{ coll.ChildListDtoTypeName }}
+        {
+{{ for prop in coll.ChildScalarProperties }}
+            {{ prop.Name }} = child.{{ prop.Name }},
+{{ end }}
+{{ for nav in coll.ChildReferenceNavigations }}
+            {{ nav.FlattenedFieldName }} = child.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+        }).ToList(),
+{{ end }}
+    };
+
+    private static {{ EntityName }}ListDto ToListDto({{ EntityName }} entity) => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = entity.{{ prop.Name }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.FlattenedFieldName }} = entity.{{ nav.NavigationPropertyName }}?.{{ nav.RelatedDisplayPropertyName }}{{ if !nav.IsNullable }} ?? string.Empty{{ end }},
+{{ end }}
+    };
+}

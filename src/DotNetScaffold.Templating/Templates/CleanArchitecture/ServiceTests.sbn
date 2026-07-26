@@ -1,0 +1,173 @@
+using {{ ApplicationNamespace }};
+using {{ InfrastructureNamespace }};
+{{ if EntityNamespace != InfrastructureNamespace }}
+using {{ EntityNamespace }};
+{{ end }}
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+
+namespace {{ InfrastructureTestsNamespace }};
+
+/// <summary>
+/// EF Core InMemory-seeded: {{ EntityName }}Service injects AppDbContext directly (no repository
+/// interface to mock), so it's tested against a real in-memory-provider context instead of Moq.
+/// </summary>
+public class {{ EntityName }}ServiceTests
+{
+    private static AppDbContext CreateContext(string databaseName) =>
+        new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(databaseName).Options);
+
+    private static {{ EntityName }} CreateSeedEntity() => new()
+    {
+{{ for prop in ScalarProperties }}
+        {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+{{ for nav in ReferenceNavigations }}
+        {{ nav.NavigationPropertyName }} = new {{ nav.RelatedEntityClrName }} { {{ nav.RelatedDisplayPropertyName }} = {{ nav.RelatedDisplayPropertySampleValueLiteral }} },
+{{ end }}
+    };
+
+    [Fact]
+    public async Task GetByIdAsync_WhenEntityExists_ReturnsMappedDto()
+    {
+        var databaseName = Guid.NewGuid().ToString("N");
+        var entity = CreateSeedEntity();
+        using (var seedContext = CreateContext(databaseName))
+        {
+            seedContext.Add(entity);
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext(databaseName);
+        var service = new {{ EntityName }}Service(context);
+
+        var result = await service.GetByIdAsync(entity.{{ PrimaryKeyPropertyName }});
+
+        result.{{ PrimaryKeyPropertyName }}.Should().Be(entity.{{ PrimaryKeyPropertyName }});
+{{ for nav in ReferenceNavigations }}
+        result.{{ nav.FlattenedFieldName }}.Should().Be(entity.{{ nav.NavigationPropertyName }}.{{ nav.RelatedDisplayPropertyName }});
+{{ end }}
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString("N"));
+        var service = new {{ EntityName }}Service(context);
+
+        var act = () => service.GetByIdAsync({{ PrimaryKeySampleValueLiteral }});
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsAllEntitiesMappedToListDtos()
+    {
+        var databaseName = Guid.NewGuid().ToString("N");
+        var entity = CreateSeedEntity();
+        using (var seedContext = CreateContext(databaseName))
+        {
+            seedContext.Add(entity);
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext(databaseName);
+        var service = new {{ EntityName }}Service(context);
+
+        var result = await service.GetAllAsync();
+
+        result.Should().ContainSingle().Which.{{ PrimaryKeyPropertyName }}.Should().Be(entity.{{ PrimaryKeyPropertyName }});
+    }
+
+    [Fact]
+    public async Task CreateAsync_AddsTheMappedEntityAndSavesChanges()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString("N"));
+        var service = new {{ EntityName }}Service(context);
+        var dto = new Create{{ EntityName }}Dto
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+        };
+
+        var result = await service.CreateAsync(dto);
+
+        (await context.Set<{{ EntityName }}>().CountAsync()).Should().Be(1);
+{{ for prop in CreateOrUpdateProperties }}
+        result.{{ prop.Name }}.Should().Be(dto.{{ prop.Name }});
+{{ end }}
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenEntityExists_UpdatesFieldsAndSavesChanges()
+    {
+        var databaseName = Guid.NewGuid().ToString("N");
+        var entity = CreateSeedEntity();
+        using (var seedContext = CreateContext(databaseName))
+        {
+            seedContext.Add(entity);
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext(databaseName);
+        var service = new {{ EntityName }}Service(context);
+        var dto = new Update{{ EntityName }}Dto
+        {
+{{ for prop in CreateOrUpdateProperties }}
+            {{ prop.Name }} = {{ prop.SampleValueLiteral }},
+{{ end }}
+        };
+
+        await service.UpdateAsync(entity.{{ PrimaryKeyPropertyName }}, dto);
+
+        using var verifyContext = CreateContext(databaseName);
+        var updated = await verifyContext.Set<{{ EntityName }}>().FindAsync(entity.{{ PrimaryKeyPropertyName }});
+{{ for prop in CreateOrUpdateProperties }}
+        updated!.{{ prop.Name }}.Should().Be(dto.{{ prop.Name }});
+{{ end }}
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString("N"));
+        var service = new {{ EntityName }}Service(context);
+        var dto = new Update{{ EntityName }}Dto();
+
+        var act = () => service.UpdateAsync({{ PrimaryKeySampleValueLiteral }}, dto);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenEntityExists_RemovesEntityAndSavesChanges()
+    {
+        var databaseName = Guid.NewGuid().ToString("N");
+        var entity = CreateSeedEntity();
+        using (var seedContext = CreateContext(databaseName))
+        {
+            seedContext.Add(entity);
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext(databaseName);
+        var service = new {{ EntityName }}Service(context);
+
+        await service.DeleteAsync(entity.{{ PrimaryKeyPropertyName }});
+
+        using var verifyContext = CreateContext(databaseName);
+        (await verifyContext.Set<{{ EntityName }}>().CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenEntityDoesNotExist_ThrowsNotFoundException()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString("N"));
+        var service = new {{ EntityName }}Service(context);
+
+        var act = () => service.DeleteAsync({{ PrimaryKeySampleValueLiteral }});
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+}
