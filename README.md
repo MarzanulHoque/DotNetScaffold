@@ -17,8 +17,8 @@ your normal test suite. If you (or a teammate, or an AI assistant) later add cod
 layering rules — say, the data layer starts calling into the business layer — those tests fail, so the
 mistake is caught by `dotnet test` instead of slipping into a code review.
 
-> **Status**: actively being built. Some commands described below are still stubs while the underlying
-> pieces are implemented — check `PROGRESS-TRACKER.md` for what's working today.
+> **Status**: feature-complete for v1 (see `PROGRESS-TRACKER.md`) and packaged as a real `dotnet tool`,
+> but **not yet published to NuGet.org** — install it locally from a built package as shown below.
 
 ## Requirements
 
@@ -29,13 +29,24 @@ mistake is caught by `dotnet test` instead of slipping into a code review.
 
 ## Getting started
 
-Once published, you'll install it like any other global tool:
+Once published to NuGet.org, you'll install it like any other global tool:
 
 ```bash
 dotnet tool install -g DotNetScaffold.Tool
 ```
 
-Until then, you can build and run it directly from source:
+Until then, build the package from source and install it from the local output folder:
+
+```bash
+dotnet pack src/DotNetScaffold.Cli/DotNetScaffold.Cli.csproj -c Release -o ./nupkg-out
+dotnet tool install -g DotNetScaffold.Tool --add-source ./nupkg-out
+```
+
+Either way, the installed command is `dnscaffold`. To pick up a change you made to the source, bump
+`<Version>` in `DotNetScaffold.Cli.csproj`, re-run `dotnet pack`, then `dotnet tool update -g
+DotNetScaffold.Tool --add-source ./nupkg-out`.
+
+You can also skip packaging entirely and run straight from source:
 
 ```bash
 dotnet run --project src/DotNetScaffold.Cli -- <command> [options]

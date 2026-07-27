@@ -16,4 +16,21 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dnscaffold</ToolCommandName>
+    <PackageId>DotNetScaffold.Tool</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Scaffolds a new ASP.NET Core backend solution (layered or Clean Architecture) and generates CRUD code and tests from an existing EF Core DbContext, complete with architecture-fitness tests.</Description>
+    <PackageTags>dotnet-tool;scaffolding;codegen;crud;efcore;clean-architecture;aspnetcore</PackageTags>
+    <PackageProjectUrl>https://github.com/MarzanulHoque/DotNetScaffold</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MarzanulHoque/DotNetScaffold.git</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>
