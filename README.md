@@ -103,3 +103,7 @@ build feedback loop, not an extra step you have to remember to run.
 - Your project must build before `generate` can read its entity model
 - Composite (multi-column) primary keys aren't supported yet
 - CQRS/MediatR-style generation, database migrations, and frontend code generation are not in scope
+
+## License
+
+MIT — see [LICENSE](LICENSE).
