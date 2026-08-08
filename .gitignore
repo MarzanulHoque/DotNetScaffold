@@ -4,9 +4,10 @@ obj/
 *.user
 .vs/
 
-## Rider / VS Code
+## Rider / VS Code / AI Tools
 .idea/
 .vscode/
+.claude/
 
 ## Test / coverage output
 TestResults/
